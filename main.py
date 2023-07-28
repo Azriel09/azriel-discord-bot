@@ -15,6 +15,9 @@ password = os.getenv('password')
 TOKEN = os.getenv('TOKEN')
 GUILD_ID = int(os.getenv('GUILD_ID'))
 manga_channel_id = int(os.getenv('MANGA_CHANNEL_ID'))
+user_id = int(os.getenv('DISCORD_USER_ID'))
+
+
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 date = datetime.datetime.today()
@@ -43,7 +46,8 @@ async def sticky_post():
     # Loop through subreddit list
     for subs in subreddits:
         subreddit = await reddit.subreddit(subs)
-        await channel.send(f'# {subs}')
+
+        await channel.send(f'# {subs}---------------------------------------------------------')
         print(subs)
         # List to store all pinned posts url id
         submission_ids = []
@@ -65,14 +69,14 @@ async def sticky_post():
                     submission_ids.append(sticky_id)
 
                     try:
-                        await channel.send(sticky_id.title)
+                        await channel.send(f'## {sticky_id.title}')
                         await channel.send(f'https://www.reddit.com{sticky_id.permalink}')
                     except AttributeError:
                         await channel.send("Attribute error encountered")
 
                 else:
                     break
-
+    await channel.send(f'<@{user_id}>')
 def main():
     sticky_post.start()
     client.run(TOKEN)
