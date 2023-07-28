@@ -14,7 +14,7 @@ reddit_user = os.getenv('reddit_user')
 password = os.getenv('password')
 TOKEN = os.getenv('TOKEN')
 GUILD_ID = int(os.getenv('GUILD_ID'))
-
+manga_channel_id = int(os.getenv('MANGA_CHANNEL_ID'))
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 date = datetime.datetime.today()
@@ -26,34 +26,7 @@ async def on_ready():
     print(f'We have logged in as {client.user}')
 
 
-@tasks.loop(hours=4)
-async def opm():
-    # date = datetime.datetime.today()
-    day = int(datetime.datetime.today().strftime('%w'))
-
-    if day == 0:
-
-        reddit = asyncpraw.Reddit(client_id=client_id,
-                                  client_secret=secret,
-                                  username=reddit_user,
-                                  password=password,
-                                  user_agent=user_agent)
-
-        subreddit = await reddit.subreddit("Manga")
-        all_subs = []
-        top = subreddit.top(time_filter="month")
-        async for submission in top:
-            if f"[DISC] One Punch" in submission.title:
-                all_subs.append(f"{submission.title} - {submission.url}\n")
-
-        channel = client.get_channel(993091036572303420)
-
-
-        await channel.purge(limit=10)
-        for subs in all_subs:
-            await channel.send(subs)
-
-@tasks.loop(hours=4)
+@tasks.loop(hours=6)
 async def sticky_post():
 
     reddit = asyncpraw.Reddit(client_id=client_id,
@@ -62,50 +35,51 @@ async def sticky_post():
                               password=password,
                               user_agent=user_agent)
 
-    subreddit = await reddit.subreddit("OnePunchMan")
-    all_subs = []
-    sticky_id = await subreddit.sticky()
-    print(sticky_id.permalink)
+    await client.wait_until_ready()
+
+    # Channel to send the chapters it got from reddit
+    channel = client.get_channel(manga_channel_id)
+
+    # Loop through subreddit list
+    for subs in subreddits:
+        subreddit = await reddit.subreddit(subs)
+        await channel.send(f'# {subs}')
+        print(subs)
+        # List to store all pinned posts url id
+        submission_ids = []
 
 
 
-@tasks.loop(hours=4)
-async def kaguya():
-    # date = datetime.datetime.today()
-    day = int(datetime.datetime.today().strftime('%w'))
+        # Looping through pinned posts
+        for i in range(1, 6):
+            sticky_id = await subreddit.sticky(i)
 
-    if day == 0:
+            # Prevent duplication
+            if sticky_id in submission_ids:
+                break
+            else:
+                # To filter non-chapter pinned posts
+                if "chapter" in sticky_id.title or "Chapter" in sticky_id.title:
 
-        reddit = asyncpraw.Reddit(client_id=client_id,
-                                  client_secret=secret,
-                                  username=reddit_user,
-                                  password=password,
-                                  user_agent=user_agent)
+                    # lists all pinned posts url ids to check if there's duplication
+                    submission_ids.append(sticky_id)
 
-        subreddit = await reddit.subreddit("Manga")
-        all_subs = []
-        top = subreddit.top(time_filter="month")
-        async for submission in top:
-            if f"[DISC] Kaguya" in submission.title:
-                all_subs.append(f"{submission.title} - {submission.url}\n")
+                    try:
+                        await channel.send(sticky_id.title)
+                        await channel.send(f'https://www.reddit.com{sticky_id.permalink}')
+                    except AttributeError:
+                        await channel.send("Attribute error encountered")
 
-        channel = client.get_channel(993091063407448134)
-
-
-        await channel.purge(limit=10)
-        for subs in all_subs:
-            await channel.send(subs)
-
+                else:
+                    break
 
 def main():
-    # kaguya.start()
-    # opm.start()
     sticky_post.start()
     client.run(TOKEN)
-
 
 if __name__ == "__main__":
     main()
 
 
-
+"""WILL FIND A WAY TO GET CHAPTERS THAT ARENT PINNED IN THE FUTURE"""
+"""WILL ADD A FEATURE TO MENTION USER EVERYTIME IT SENDS MESSAGE"""
